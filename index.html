@@ -6,34 +6,27 @@
   <title>MMSHUB - Adult Aggregator Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-  <!-- Firebase & Icons -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <style>
     [x-cloak] { display: none !important; }
-    /* Telegram style animated blur for premium posts */
     .premium-blur {
       backdrop-filter: blur(16px) brightness(0.6);
       -webkit-backdrop-filter: blur(16px) brightness(0.6);
       background: rgba(15, 23, 42, 0.4);
     }
-    .blur-shimmer {
-      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
-      animation: shimmer 2s infinite;
-    }
-    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
   </style>
 </head>
 <body class="bg-black text-gray-100 font-sans min-h-screen select-none" x-data="mainApp()" x-init="initApp()" @contextmenu.prevent @keydown.f12.prevent>
 
-  <!-- Age Verification Gate Gate Modal -->
+  <!-- Age Verification Gate -->
   <div x-show="!ageVerified" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
     <div class="bg-gray-900 border border-red-600/40 p-6 rounded-2xl max-w-sm w-full text-center space-y-4 shadow-2xl">
       <div class="text-4xl text-red-600 font-black">18+ WARNING</div>
-      <p class="text-xs text-gray-300">This website contains adult content. You must be at least 18 years old or legal age in your jurisdiction to enter.</p>
+      <p class="text-xs text-gray-300">This website contains adult content. You must be at least 18 years old to enter.</p>
       <button @click="verifyAge()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition">I am 18 or Older - Enter</button>
     </div>
   </div>
@@ -42,11 +35,11 @@
   <header class="bg-gray-900 border-b border-gray-800 sticky top-0 z-40 p-3">
     <div class="max-w-7xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3">
-        <button @click="mobileMenu = !mobileMenu" class="text-xl text-gray-300"><i class="fa-solid fa-bars"></i></button>
-        <h1 class="text-xl md:text-2xl font-black text-red-600 tracking-wider">MMS<span class="text-yellow-400">HUB</span></h1>
+        <button @click="mobileMenu = true" class="text-xl text-gray-300 p-1 hover:text-white"><i class="fa-solid fa-bars"></i></button>
+        <h1 class="text-xl md:text-2xl font-black text-red-600 tracking-wider cursor-pointer" @click="selectedCategory = 'all'">MMS<span class="text-yellow-400">HUB</span></h1>
       </div>
       
-      <!-- Category Chips / Navigation Bar -->
+      <!-- Category Chips -->
       <div class="hidden md:flex items-center gap-2 overflow-x-auto text-xs">
         <button @click="selectedCategory = 'all'" :class="selectedCategory === 'all' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-300'" class="px-3 py-1.5 rounded-lg font-bold">All</button>
         <template x-for="cat in categories" :key="cat">
@@ -54,62 +47,119 @@
         </template>
       </div>
 
-      <!-- Auth and Membership Button -->
+      <!-- Auth and Account Section -->
       <div class="flex items-center gap-2">
-        <template x-if="user">
-          <div class="flex items-center gap-2">
-            <img :src="user.photoURL" class="w-7 h-7 rounded-full border border-red-500">
-            <span class="text-xs font-bold text-emerald-400 hidden sm:inline" x-text="isPremiumUser ? 'VIP User' : 'Free'"></span>
+        <template x-if="currentUser">
+          <div class="flex items-center gap-2 bg-gray-800 px-3 py-1.5 rounded-xl border border-gray-700">
+            <i class="fa-solid fa-user-ninja text-red-500"></i>
+            <span class="text-xs font-bold text-emerald-400" x-text="currentUser.username"></span>
+            <span x-show="isPremiumUser" class="bg-yellow-500/20 text-yellow-400 text-[9px] font-black px-1.5 py-0.5 rounded border border-yellow-500/40">VIP</span>
+            <button @click="logout()" class="text-xs text-gray-400 hover:text-red-500 ml-2" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></button>
           </div>
         </template>
-        <template x-if="!user">
-          <button @click="googleAuth()" class="bg-red-600 text-xs px-3 py-1.5 rounded-lg font-bold text-white"><i class="fa-brands fa-google"></i> Login</button>
+        <template x-if="!currentUser">
+          <button @click="showAuthModal = true" class="bg-red-600 text-xs px-3 py-1.5 rounded-lg font-bold text-white hover:bg-red-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-lock"></i> Login / Register
+          </button>
         </template>
       </div>
     </div>
   </header>
 
-  <!-- Video Grid Stream Container -->
+  <!-- Mobile Drawer Menu -->
+  <div x-show="mobileMenu" class="fixed inset-0 z-50 flex" x-cloak>
+    <div class="fixed inset-0 bg-black/80" @click="mobileMenu = false"></div>
+    <div class="relative bg-gray-900 w-64 max-w-sm h-full p-4 border-r border-gray-800 flex flex-col justify-between z-10 space-y-4">
+      <div>
+        <div class="flex justify-between items-center border-b border-gray-800 pb-3 mb-4">
+          <h2 class="text-lg font-bold text-red-600">Menu Navigation</h2>
+          <button @click="mobileMenu = false" class="text-gray-400 text-xl">&times;</button>
+        </div>
+        <div class="space-y-2 text-xs font-semibold">
+          <button @click="selectedCategory = 'all'; mobileMenu = false" class="w-full text-left p-2.5 rounded-lg bg-gray-800 text-white flex items-center gap-2">
+            <i class="fa-solid fa-house text-red-500"></i> Home / All Videos
+          </button>
+          <div class="text-gray-400 text-[11px] font-bold mt-4 mb-2 uppercase tracking-wider">Categories</div>
+          <template x-for="cat in categories" :key="cat">
+            <button @click="selectedCategory = cat; mobileMenu = false" class="w-full text-left p-2.5 rounded-lg hover:bg-gray-800 text-gray-300 flex items-center justify-between border-b border-gray-800/40">
+              <span x-text="cat"></span>
+              <i class="fa-solid fa-chevron-right text-[10px] text-gray-500"></i>
+            </button>
+          </template>
+        </div>
+      </div>
+      <div class="text-[11px] text-gray-500 text-center border-t border-gray-800 pt-3">
+        MMSHUB Network Platform
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Auth Modal (Login / Register) -->
+  <div x-show="showAuthModal" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" x-cloak>
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm p-5 space-y-4 relative">
+      <button @click="showAuthModal = false" class="absolute top-3 right-3 text-gray-400 text-xl">&times;</button>
+
+      <div class="flex gap-2 border-b border-gray-800 pb-3">
+        <button @click="authMode = 'login'; authError = ''" :class="authMode === 'login' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'" class="flex-1 py-2 text-xs font-bold rounded-lg">Login</button>
+        <button @click="authMode = 'signup'; authError = ''" :class="authMode === 'signup' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'" class="flex-1 py-2 text-xs font-bold rounded-lg">Register</button>
+      </div>
+
+      <div x-show="authError" class="p-2.5 bg-red-950/60 border border-red-600/50 rounded-xl text-red-400 text-[11px] text-center font-bold" x-text="authError"></div>
+
+      <!-- Form Body -->
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold text-gray-400 block mb-1">Username (6-12 characters)</label>
+          <input type="text" x-model="authUsername" placeholder="Enter username..." class="w-full bg-gray-950 border border-gray-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-600">
+        </div>
+
+        <div>
+          <label class="text-[11px] font-bold text-gray-400 block mb-1">Password (6-22 characters)</label>
+          <input type="password" x-model="authPassword" placeholder="Enter password..." class="w-full bg-gray-950 border border-gray-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-red-600">
+        </div>
+
+        <button x-show="authMode === 'login'" @click="handleLogin()" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl text-xs transition">Account Login</button>
+        <button x-show="authMode === 'signup'" @click="handleSignup()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs transition">Create Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Video Grid Stream -->
   <main class="max-w-7xl mx-auto p-4">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <template x-for="video in filteredVideos" :key="video.id">
         <div class="bg-gray-900 rounded-xl overflow-hidden border border-gray-800 relative group cursor-pointer" @click="handleVideoClick(video)">
-          
-          <!-- Thumbnail Container -->
           <div class="relative aspect-video">
             <img :src="video.thumbnail" class="w-full h-full object-cover">
             
-            <!-- Animated Telegram-Style Blur for Premium Content -->
             <template x-if="video.isPremium && !isPremiumUser">
               <div class="absolute inset-0 premium-blur flex flex-col items-center justify-center p-2 text-center">
-                <div class="blur-shimmer absolute inset-0"></div>
                 <i class="fa-solid fa-lock text-yellow-400 text-xl mb-1"></i>
                 <span class="text-[10px] font-bold text-white bg-red-600 px-2 py-0.5 rounded-full">PREMIUM CONTENT</span>
                 <span class="text-[9px] text-yellow-300 mt-1 font-semibold">Click to Unlock</span>
               </div>
             </template>
 
-            <!-- Video View and Badge -->
             <div class="absolute bottom-2 right-2 bg-black/80 px-2 py-0.5 rounded text-[10px] text-yellow-400 flex items-center gap-1">
               <i class="fa-solid fa-eye"></i> <span x-text="video.views || 0"></span>
             </div>
           </div>
 
-          <!-- Title and Info -->
-          <div class="p-2.5">
+          <div class="p-2.5 space-y-2">
             <h3 class="text-xs font-bold text-gray-200 line-clamp-2" x-text="video.title"></h3>
-            <div class="flex justify-between items-center mt-2 text-[10px] text-gray-400">
+            <div class="flex justify-between items-center text-[10px] text-gray-400 border-t border-gray-800/60 pt-2">
               <span class="bg-gray-800 px-1.5 py-0.5 rounded" x-text="video.category || 'General'"></span>
-              <span><i class="fa-solid fa-heart text-red-500"></i> <span x-text="video.likes || 0"></span></span>
+              <div class="flex items-center gap-2">
+                <span><i class="fa-solid fa-heart text-red-500"></i> <span x-text="video.likes || 0"></span></span>
+              </div>
             </div>
           </div>
-
         </div>
       </template>
     </div>
   </main>
 
-  <!-- Modal Player + 3-Step Download + Comment Replies -->
+  <!-- Video Modal Player -->
   <div x-show="activeVideo" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-2 md:p-4" x-cloak>
     <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-4xl overflow-hidden max-h-[95vh] flex flex-col">
       <div class="p-3 bg-gray-950 flex justify-between items-center border-b border-gray-800">
@@ -118,97 +168,41 @@
       </div>
 
       <div class="p-4 overflow-y-auto space-y-4">
-        <!-- Player Container -->
+        <!-- Embed Video Player -->
         <div class="aspect-video w-full bg-black rounded-xl overflow-hidden border border-gray-800">
-          <iframe :src="activeVideo?.iframeUrl" class="w-full h-full" frameborder="0" allowfullscreen></iframe>
+          <iframe :src="getEmbedUrl(activeVideo?.iframeUrl)" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
 
-        <!-- 3-Step Download Link Unlocker Button System -->
-        <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 text-center space-y-3">
-          <h3 class="text-xs font-bold text-yellow-400"><i class="fa-solid fa-shield-halved"></i> Download Unlocker (3-Step Ads Protection)</h3>
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <button @click="openSmartLink(1)" :class="step1 ? 'bg-emerald-600' : 'bg-red-600'" class="py-2 rounded-lg font-bold text-white">1. Verify Link 1</button>
-            <button @click="openSmartLink(2)" :class="step2 ? 'bg-emerald-600' : 'bg-red-600'" class="py-2 rounded-lg font-bold text-white">2. Verify Link 2</button>
-          </div>
-          <a :href="step1 && step2 ? activeVideo?.downloadUrl : '#'" :target="step1 && step2 ? '_blank' : '_self'" :class="step1 && step2 ? 'bg-yellow-500 text-black cursor-pointer' : 'bg-gray-800 text-gray-500 cursor-not-allowed'" class="block w-full py-3 rounded-xl font-black text-xs">
-            DOWNLOAD FILE NOW (MEGA)
-          </a>
+        <!-- Like, Save, Share Bar -->
+        <div class="flex justify-around items-center bg-gray-950 p-2.5 rounded-xl border border-gray-800 text-xs text-gray-300">
+          <button @click="likeVideo()" class="flex items-center gap-1.5 hover:text-red-500 font-bold">
+            <i class="fa-solid fa-thumbs-up text-red-500"></i> <span x-text="activeVideo?.likes || 0"></span> Like
+          </button>
+          <button @click="saveVideo()" class="flex items-center gap-1.5 hover:text-yellow-400 font-bold">
+            <i class="fa-solid fa-bookmark text-yellow-400"></i> Save
+          </button>
+          <button @click="shareVideo()" class="flex items-center gap-1.5 hover:text-blue-400 font-bold">
+            <i class="fa-solid fa-share-nodes text-blue-400"></i> Share
+          </button>
         </div>
 
-        <!-- Professional Comments System with Profile & Reply -->
+        <!-- Comments System -->
         <div class="space-y-3">
           <h4 class="text-xs font-bold text-gray-300">User Discussion & Comments</h4>
           <div class="flex gap-2">
-            <input type="text" x-model="commentText" placeholder="Write a public comment..." class="bg-gray-950 border border-gray-800 rounded-lg p-2 text-xs w-full text-white">
+            <input type="text" x-model="commentText" placeholder="Write a comment..." class="bg-gray-950 border border-gray-800 rounded-lg p-2 text-xs w-full text-white">
             <button @click="addComment()" class="bg-red-600 text-white text-xs px-4 rounded-lg font-bold">Post</button>
           </div>
 
-          <!-- Comment Tree -->
           <div class="space-y-2 max-h-48 overflow-y-auto">
             <template x-for="c in comments" :key="c.id">
               <div class="bg-gray-950 p-2.5 rounded-xl border border-gray-800 space-y-1">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <img :src="c.photo" class="w-5 h-5 rounded-full">
-                    <span class="text-xs font-bold text-red-400" x-text="c.user"></span>
-                  </div>
-                  <button @click="replyTo = c.id" class="text-[10px] text-gray-400 hover:text-white">Reply</button>
-                </div>
+                <span class="text-xs font-bold text-red-400" x-text="c.user"></span>
                 <p class="text-xs text-gray-200" x-text="c.text"></p>
-
-                <!-- Reply list inside comment -->
-                <template x-if="c.replies">
-                  <div class="pl-4 border-l border-gray-800 space-y-1 mt-1">
-                    <template x-for="r in c.replies" :key="r.time">
-                      <div class="text-[11px] bg-gray-900 p-1.5 rounded">
-                        <span class="font-bold text-yellow-400" x-text="r.user"></span>: <span x-text="r.text"></span>
-                      </div>
-                    </template>
-                  </div>
-                </template>
               </div>
             </template>
           </div>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Premium Payment Package Gateway Modal (bKash, Nagad, Rocket Theme) -->
-  <div x-show="showPaymentModal" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" x-cloak>
-    <div class="bg-gray-900 border border-amber-500/50 rounded-2xl w-full max-w-md p-5 space-y-4">
-      <div class="flex justify-between items-center border-b border-gray-800 pb-2">
-        <h3 class="text-sm font-bold text-yellow-400"><i class="fa-solid fa-crown"></i> Select Premium Subscription Package</h3>
-        <button @click="showPaymentModal = false" class="text-gray-400 text-lg">&times;</button>
-      </div>
-
-      <!-- Packages Selection -->
-      <div class="grid grid-cols-2 gap-2 text-xs">
-        <div @click="selectedPack = '1 Month (199 Tk)'" :class="selectedPack.includes('199') ? 'border-amber-400 bg-amber-400/10' : 'border-gray-800'" class="p-3 border rounded-xl cursor-pointer text-center">
-          <div class="font-bold">1 Month VIP</div>
-          <div class="text-amber-400 font-extrabold mt-1">199 BDT</div>
-        </div>
-        <div @click="selectedPack = '3 Month (399 Tk)'" :class="selectedPack.includes('399') ? 'border-amber-400 bg-amber-400/10' : 'border-gray-800'" class="p-3 border rounded-xl cursor-pointer text-center">
-          <div class="font-bold">3 Month VIP</div>
-          <div class="text-amber-400 font-extrabold mt-1">399 BDT</div>
-        </div>
-      </div>
-
-      <!-- Payment Gateways Options -->
-      <div class="space-y-2 text-xs">
-        <label class="block text-gray-400">Payment Option (Send Money):</label>
-        <div class="bg-pink-900/30 border border-pink-600 p-2.5 rounded-xl flex items-center justify-between text-pink-400 font-bold">
-          <span>bKash Personal: 0190942xxxx</span>
-        </div>
-        <div class="bg-orange-900/30 border border-orange-600 p-2.5 rounded-xl flex items-center justify-between text-orange-400 font-bold">
-          <span>Nagad Personal: 0190942xxxx</span>
-        </div>
-      </div>
-
-      <!-- TrxID Input Form -->
-      <div class="space-y-2">
-        <input type="text" x-model="trxId" placeholder="Enter Payment TrxID (Transaction ID)" class="w-full bg-gray-950 border border-gray-800 rounded-xl p-2.5 text-xs text-white">
-        <button @click="submitPaymentRequest()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl text-xs">Submit Approval Request</button>
       </div>
     </div>
   </div>
@@ -226,31 +220,32 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-    const auth = firebase.auth();
 
     function mainApp() {
       return {
         ageVerified: false,
+        mobileMenu: false,
+        showAuthModal: false,
+        authMode: 'login',
+        authUsername: '',
+        authPassword: '',
+        authError: '',
+        currentUser: null,
+        isPremiumUser: false,
         videos: [],
         categories: [],
         selectedCategory: 'all',
-        user: null,
-        isPremiumUser: false,
         activeVideo: null,
-        showPaymentModal: false,
-        selectedPack: '1 Month (199 Tk)',
-        trxId: '',
-        step1: false,
-        step2: false,
         comments: [],
         commentText: '',
 
         initApp() {
           this.ageVerified = localStorage.getItem('ageVerified') === 'true';
-          auth.onAuthStateChanged(u => {
-            this.user = u;
-            if(u) this.checkPremiumStatus(u.uid);
-          });
+          const savedUser = localStorage.getItem('mmshub_user');
+          if (savedUser) {
+            this.currentUser = JSON.parse(savedUser);
+            this.checkPremiumStatus(this.currentUser.username);
+          }
           this.loadCategories();
           this.loadVideos();
         },
@@ -260,13 +255,65 @@
           localStorage.setItem('ageVerified', 'true');
         },
 
-        googleAuth() {
-          auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        handleSignup() {
+          this.authError = '';
+          const u = this.authUsername.trim();
+          const p = this.authPassword.trim();
+
+          if (u.length < 6 || u.length > 12) {
+            return this.authError = "Username must be between 6 and 12 characters.";
+          }
+          if (p.length < 6 || p.length > 22) {
+            return this.authError = "Password must be between 6 and 22 characters.";
+          }
+
+          db.collection("users").doc(u).get().then(doc => {
+            if (doc.exists) {
+              this.authError = "Username already taken! Choose a different one.";
+            } else {
+              const userData = { username: u, password: p, isPremium: false, createdAt: new Date() };
+              db.collection("users").doc(u).set(userData).then(() => {
+                this.currentUser = { username: u };
+                localStorage.setItem('mmshub_user', JSON.stringify(this.currentUser));
+                this.showAuthModal = false;
+                this.authUsername = '';
+                this.authPassword = '';
+              });
+            }
+          });
         },
 
-        checkPremiumStatus(uid) {
-          db.collection("users").doc(uid).onSnapshot(doc => {
-            this.isPremiumUser = doc.exists && doc.data().isPremium;
+        handleLogin() {
+          this.authError = '';
+          const u = this.authUsername.trim();
+          const p = this.authPassword.trim();
+
+          db.collection("users").doc(u).get().then(doc => {
+            if (!doc.exists) {
+              return this.authError = "Invalid username or password!";
+            }
+            if (doc.data().password !== p) {
+              return this.authError = "Invalid username or password!";
+            }
+
+            this.currentUser = { username: u };
+            this.isPremiumUser = doc.data().isPremium || false;
+            localStorage.setItem('mmshub_user', JSON.stringify(this.currentUser));
+            this.showAuthModal = false;
+            this.authUsername = '';
+            this.authPassword = '';
+          });
+        },
+
+        logout() {
+          this.currentUser = null;
+          this.isPremiumUser = false;
+          localStorage.removeItem('mmshub_user');
+        },
+
+        checkPremiumStatus(u) {
+          db.collection("users").doc(u).onSnapshot(doc => {
+            if (doc.exists) this.isPremiumUser = doc.data().isPremium;
           });
         },
 
@@ -283,31 +330,44 @@
         },
 
         get filteredVideos() {
-          if(this.selectedCategory === 'all') return this.videos;
+          if (this.selectedCategory === 'all') return this.videos;
           return this.videos.filter(v => v.category === this.selectedCategory);
         },
 
-        handleVideoClick(video) {
-          if(video.isPremium && !this.isPremiumUser) {
-            this.showPaymentModal = true;
-          } else {
-            this.activeVideo = video;
-            this.step1 = false;
-            this.step2 = false;
-            db.collection("videos").doc(video.id).update({ views: firebase.firestore.FieldValue.increment(1) });
-            this.loadComments(video.id);
+        getEmbedUrl(url) {
+          if (!url) return '';
+          if (url.includes('<iframe')) {
+            const match = url.match(/src=["']([^"']+)["']/);
+            return match ? match[1] : '';
           }
+          return url;
         },
 
-        openSmartLink(step) {
-          db.collection("settings").doc("ads").get().then(doc => {
-            if(doc.exists) {
-              const url = step === 1 ? doc.data().link1 : doc.data().link2;
-              if(url) window.open(url, '_blank');
-            }
+        handleVideoClick(video) {
+          this.activeVideo = video;
+          db.collection("videos").doc(video.id).update({ views: firebase.firestore.FieldValue.increment(1) });
+          this.loadComments(video.id);
+        },
+
+        likeVideo() {
+          if (!this.activeVideo) return;
+          db.collection("videos").doc(this.activeVideo.id).update({
+            likes: firebase.firestore.FieldValue.increment(1)
           });
-          if(step === 1) this.step1 = true;
-          if(step === 2) this.step2 = true;
+          this.activeVideo.likes = (this.activeVideo.likes || 0) + 1;
+        },
+
+        saveVideo() {
+          alert("Saved to bookmarks!");
+        },
+
+        shareVideo() {
+          if (navigator.share) {
+            navigator.share({ title: this.activeVideo.title, url: window.location.href });
+          } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert("Link copied to clipboard!");
+          }
         },
 
         loadComments(vId) {
@@ -317,32 +377,14 @@
         },
 
         addComment() {
-          if(!this.user) return alert("Login First!");
-          if(!this.commentText) return;
+          if (!this.currentUser) return alert("Please Login First!");
+          if (!this.commentText) return;
           db.collection("videos").doc(this.activeVideo.id).collection("comments").add({
-            user: this.user.displayName,
-            photo: this.user.photoURL,
+            user: this.currentUser.username,
             text: this.commentText,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           this.commentText = '';
-        },
-
-        submitPaymentRequest() {
-          if(!this.user) return alert("Please Login First!");
-          if(!this.trxId) return alert("Enter Transaction ID");
-          db.collection("paymentRequests").add({
-            uid: this.user.uid,
-            userName: this.user.displayName,
-            package: this.selectedPack,
-            trxId: this.trxId,
-            status: "pending",
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
-            alert("Payment Request Submitted! Admin will verify soon.");
-            this.showPaymentModal = false;
-            this.trxId = '';
-          });
         }
       }
     }
