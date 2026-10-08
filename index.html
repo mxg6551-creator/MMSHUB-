@@ -14,6 +14,13 @@
   <style>
     [x-cloak] { display: none !important; }
     
+    /* Dynamic Header Title Styling */
+    .brand-mmshub {
+      background: linear-gradient(90deg, #ffffff, #ec4899, #f43f5e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
     /* Telegram-style Animated Blur Overlay */
     .telegram-blur {
       backdrop-filter: blur(20px) brightness(0.5);
@@ -38,7 +45,7 @@
       100% { transform: translateY(100%) rotate(30deg); }
     }
 
-    /* VIP Golden Shimmer Animation */
+    /* VIP Golden Shimmer Animation & Glow */
     .vip-golden-text {
       background: linear-gradient(90deg, #ffd700, #fff8dc, #d4af37, #ffd700);
       background-size: 200% auto;
@@ -50,6 +57,11 @@
     @keyframes goldShimmer {
       to { background-position: 200% center; }
     }
+    .vip-comment-glow {
+      color: #ffd700 !important;
+      text-shadow: 0 0 8px rgba(255, 215, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.5);
+      font-weight: 900 !important;
+    }
 
     /* Light Theme Styling Overrides */
     .theme-light {
@@ -58,27 +70,20 @@
     }
     .theme-light .bg-gray-900, .theme-light .bg-gray-950 {
       background-color: #ffffff !important;
-      color: #1f2937 !important;
+      color: #059669 !important; /* Bright Pink/Green/Blue theme */
       border-color: #e5e7eb !important;
     }
-    .theme-light .text-gray-200, .theme-light .text-gray-300, .theme-light .text-gray-400 {
-      color: #374151 !important;
+    .theme-light .text-gray-100, .theme-light .text-gray-200, .theme-light .text-gray-300, .theme-light .text-gray-400 {
+      color: #0284c7 !important; /* Vibrant Blue/Green tone */
     }
   </style>
 </head>
 <body :class="theme === 'light' ? 'theme-light' : ''" class="bg-black text-gray-100 font-sans min-h-screen select-none transition-colors duration-300" x-data="mainApp()" x-init="initApp()" @contextmenu.prevent @keydown.f12.prevent @keydown.ctrl.u.prevent>
 
-  <!-- POP-UNDER AD CODE PLACEHOLDER (Niche apnar Pop-under ad script boshaben) -->
-  <!-- 
-    <script type="text/javascript">
-      // Apnar Pop-Under Ad Code Ekhane Boshaben
-    </script>
-  -->
-
   <!-- Custom External Scripts Container -->
   <div id="custom-scripts-container"></div>
 
-  <!-- 18+ Age Verification Modal (Session-based) -->
+  <!-- 18+ Age Verification Modal (Permanent per device / localStorage) -->
   <div x-show="!ageVerified" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4">
     <div class="bg-gray-900 border border-red-600/50 p-6 rounded-2xl max-w-sm w-full text-center space-y-4 shadow-2xl animate-pulse">
       <div class="text-4xl text-red-600 font-black tracking-widest">18+ WARNING</div>
@@ -93,7 +98,9 @@
       <div class="flex items-center justify-between w-full md:w-auto gap-3">
         <div class="flex items-center gap-3">
           <button @click="mobileMenu = true" class="text-xl text-gray-300 p-1 hover:text-white"><i class="fa-solid fa-bars-staggered"></i></button>
-          <h1 class="text-xl md:text-2xl font-black text-red-600 tracking-wider cursor-pointer" @click="selectedCategory = 'all'; searchQuery = ''">MMSHUB<span class="text-yellow-400">.XYZ</span></h1>
+          <h1 class="text-xl md:text-2xl font-black tracking-wider cursor-pointer" @click="selectedCategory = 'all'; searchQuery = ''">
+            <span class="brand-mmshub">MMSHUB</span><span class="text-yellow-400">.XYZ</span>
+          </h1>
         </div>
 
         <!-- Theme Toggle Button -->
@@ -123,7 +130,6 @@
               <span class="text-xs font-bold" :class="isPremiumUser ? 'vip-golden-text font-black' : 'text-emerald-400'" x-text="currentUser.username"></span>
               <span x-show="isPremiumUser" class="bg-gradient-to-r from-amber-500 to-yellow-300 text-black text-[9px] font-black px-1.5 py-0.5 rounded shadow">VIP</span>
             </button>
-            <button @click="logout()" class="text-xs text-gray-400 hover:text-red-500 ml-2"><i class="fa-solid fa-power-off"></i></button>
           </div>
         </template>
         <template x-if="!currentUser">
@@ -175,7 +181,7 @@
             <i class="fa-solid fa-bolt text-amber-400"></i> Trending of this Week
           </button>
 
-          <!-- Custom Dynamic Links from Admin Panel -->
+          <!-- Custom Dynamic Links -->
           <template x-for="link in customMenuLinks" :key="link.id">
             <a :href="link.url" target="_blank" class="w-full text-left p-2.5 rounded-xl hover:bg-gray-800 text-gray-300 flex items-center justify-between border-b border-gray-800/40 block">
               <span x-text="link.title"></span>
@@ -227,7 +233,7 @@
     </div>
   </div>
 
-  <!-- User Profile Modal (Playlist & Account Settings) -->
+  <!-- User Profile Modal (Playlist & Account Settings + Log Out) -->
   <div x-show="showProfileModal" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" x-cloak>
     <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl p-5 space-y-4 relative max-h-[90vh] flex flex-col">
       <button @click="showProfileModal = false" class="absolute top-3 right-3 text-gray-400 text-xl">&times;</button>
@@ -259,7 +265,7 @@
           </div>
         </template>
 
-        <!-- Profile Edit Settings (1 Month Username Limit & Password Validation) -->
+        <!-- Profile Edit Settings with Log Out Button -->
         <template x-if="profileTab === 'settings'">
           <div class="space-y-4 p-2 text-xs">
             <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 space-y-3">
@@ -274,13 +280,24 @@
               <input type="password" x-model="newPassword" placeholder="New Password" class="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-white">
               <button @click="updatePassword()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl">Update Password</button>
             </div>
+
+            <!-- Logout Button shifted here -->
+            <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-white">Logout Account</h3>
+                <p class="text-[10px] text-gray-400">Sign out from this session</p>
+              </div>
+              <button @click="logout(); showProfileModal = false" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-1.5">
+                <i class="fa-solid fa-power-off"></i> Logout
+              </button>
+            </div>
           </div>
         </template>
       </div>
     </div>
   </div>
 
-  <!-- Main Video Grid Stream with Dynamic In-Feed Ads -->
+  <!-- Main Video Grid Stream -->
   <main class="max-w-7xl mx-auto p-4">
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <template x-for="(item, index) in processedFeedItems" :key="item.id || 'ad-' + index">
@@ -334,7 +351,7 @@
     </div>
   </main>
 
-  <!-- Video Modal Player & Controls -->
+  <!-- Video Modal Player & Controls (With Player Top Banner Ad) -->
   <div x-show="activeVideo" class="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-2 md:p-4" x-cloak>
     <div class="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-4xl overflow-hidden max-h-[95vh] flex flex-col shadow-2xl">
       <div class="p-3 bg-gray-950 flex justify-between items-center border-b border-gray-800">
@@ -343,6 +360,12 @@
       </div>
 
       <div class="p-4 overflow-y-auto space-y-4">
+        
+        <!-- Player Top 720x90 Banner Ad Placement -->
+        <div class="w-full bg-gray-950 border border-gray-800 rounded-xl p-2 text-center min-h-[90px] flex items-center justify-center overflow-hidden" x-show="ads.playerTopBanner">
+          <div x-html="ads.playerTopBanner"></div>
+        </div>
+
         <div class="aspect-video w-full bg-black rounded-xl overflow-hidden border border-gray-800">
           <iframe :src="getEmbedUrl(activeVideo?.iframeUrl)" class="w-full h-full" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
         </div>
@@ -382,7 +405,10 @@
             <template x-for="c in comments" :key="c.id">
               <div class="bg-gray-950 p-3 rounded-xl border border-gray-800/80 space-y-1">
                 <div class="flex justify-between items-center">
-                  <span class="text-xs font-bold text-red-500" x-text="c.user"></span>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-bold" :class="c.isVip ? 'vip-comment-glow' : 'text-red-500'" x-text="c.user"></span>
+                    <span x-show="c.isVip" class="bg-gradient-to-r from-amber-500 to-yellow-300 text-black text-[8px] font-black px-1.5 py-0.2 rounded shadow">VIP</span>
+                  </div>
                   <button @click="replyToComment(c.user)" class="text-[10px] text-gray-400 hover:text-white font-bold"><i class="fa-solid fa-reply"></i> Reply</button>
                 </div>
                 <p class="text-xs text-gray-200" x-text="c.text"></p>
@@ -484,11 +510,13 @@
         editUsername: '',
         oldPassword: '',
         newPassword: '',
-        ads: { topBanner: '', link1: '', link2: '', link3: '', feedAdTitle: '', feedAdImage: '', feedAdUrl: '' },
+        ads: { topBanner: '', playerTopBanner: '', link1: '', link2: '', link3: '', feedAdTitle: '', feedAdImage: '', feedAdUrl: '' },
 
         initApp() {
           this.theme = localStorage.getItem('theme') || 'dark';
-          this.ageVerified = sessionStorage.getItem('ageVerified') === 'true';
+          // Permanent Age verification per device (localStorage)
+          this.ageVerified = localStorage.getItem('ageVerified_permanent') === 'true';
+          
           const savedUser = localStorage.getItem('mmshub_user');
           if (savedUser) {
             this.currentUser = JSON.parse(savedUser);
@@ -510,7 +538,7 @@
 
         verifyAge() {
           this.ageVerified = true;
-          sessionStorage.setItem('ageVerified', 'true');
+          localStorage.setItem('ageVerified_permanent', 'true');
         },
 
         startGuestLoginInterval() {
@@ -518,7 +546,7 @@
             if (!this.currentUser) {
               this.showAuthModal = true;
             }
-          }, 300000); // Every 5 Minutes
+          }, 300000); // 5 Minutes Interval
         },
 
         handleSignup() {
@@ -789,7 +817,7 @@
         },
 
         loadComments(vId) {
-          db.collection("videos").doc(vId).collection("comments").onSnapshot(snap => {
+          db.collection("videos").doc(vId).collection("comments").orderBy("createdAt", "desc").onSnapshot(snap => {
             this.comments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           });
         },
@@ -798,32 +826,66 @@
           this.commentText = `@${username} `;
         },
 
+        // Per-video 3 comments limit enforcement per day
         addComment() {
           if (!this.currentUser) return alert("Please Login First!");
           if (!this.commentText) return;
+
+          const todayStr = new Date().toISOString().split('T')[0];
+          const userCommentsToday = this.comments.filter(c => {
+            if (c.user !== this.currentUser.username) return false;
+            if (!c.createdAt) return false;
+            const cDate = c.createdAt.toDate ? c.createdAt.toDate().toISOString().split('T')[0] : todayStr;
+            return cDate === todayStr;
+          });
+
+          if (userCommentsToday.length >= 3) {
+            return alert("You have reached the maximum limit of 3 comments per day for this video!");
+          }
+
           db.collection("videos").doc(this.activeVideo.id).collection("comments").add({
             user: this.currentUser.username,
             text: this.commentText,
+            isVip: this.isPremiumUser,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
           this.commentText = '';
         },
 
+        // Max 2 VIP Requests Per Day Limit
         submitPaymentRequest() {
           if (!this.currentUser) return alert("Please Login First!");
           if (!this.trxId) return alert("Enter Transaction ID");
-          db.collection("paymentRequests").add({
-            username: this.currentUser.username,
-            package: this.selectedPack.name,
-            days: this.selectedPack.days,
-            trxId: this.trxId,
-            status: "pending",
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          }).then(() => {
-            alert("Payment Submitted! Admin will review shortly.");
-            this.showPaymentModal = false;
-            this.trxId = '';
-          });
+
+          const todayStr = new Date().toISOString().split('T')[0];
+          db.collection("paymentRequests")
+            .where("username", "==", this.currentUser.username)
+            .get()
+            .then(snap => {
+              const todayRequests = snap.docs.filter(doc => {
+                const data = doc.data();
+                if (!data.createdAt) return false;
+                const reqDate = data.createdAt.toDate ? data.createdAt.toDate().toISOString().split('T')[0] : todayStr;
+                return reqDate === todayStr;
+              });
+
+              if (todayRequests.length >= 2) {
+                return alert("Daily limit reached! You can only submit 2 VIP requests per day.");
+              }
+
+              db.collection("paymentRequests").add({
+                username: this.currentUser.username,
+                package: this.selectedPack.name,
+                days: this.selectedPack.days,
+                trxId: this.trxId,
+                status: "pending",
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              }).then(() => {
+                alert("Payment Submitted! Admin will review shortly.");
+                this.showPaymentModal = false;
+                this.trxId = '';
+              });
+            });
         }
       }
     }
